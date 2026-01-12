@@ -1,0 +1,125 @@
+-- Define a tecla de atalho principal (Leader) como o Espaço
+vim.g.mapleader = ' '
+vim.g.maplocalleader = ' '
+
+-- Instalação automática do gerenciador de plugins 'lazy.nvim'
+local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
+if not vim.loop.fs_stat(lazypath) then
+  vim.fn.system {
+    'git', 'clone', '--filter=blob:none', 'https://github.com/folke/lazy.nvim.git', '--branch=stable', lazypath,
+  }
+end
+vim.opt.rtp:prepend(lazypath)
+
+-- Configuração dos plugins
+require('lazy').setup({
+  -- 1. LSP: O cérebro para o Python
+  { 'neovim/nvim-lspconfig' },
+  
+  -- Autocompletar
+  { 'hrsh7th/nvim-cmp' },         -- O motor do menu
+  { 'hrsh7th/cmp-nvim-lsp' },    -- Faz o menu ler o LSP
+  { 'L3MON4D3/LuaSnip' },        -- Suporte a snippets (atalhos de código)
+  { 'saadparwaiz1/cmp_luasnip' },-- Conecta o motor aos snippets
+
+  -- 2. Mason: O instalador de ferramentas (Linter, Formatter, LSP)
+  { 'williamboman/mason.nvim', config = true },
+  { 'williamboman/mason-lspconfig.nvim', config = true },
+
+  -- Barra lateral de arquivos
+  { 'nvim-tree/nvim-tree.lua' },
+  -- Ícones para os arquivos (opcional, mas recomendado)
+  { 'nvim-tree/nvim-web-devicons' },
+
+  -- 3. Cores e Sintaxe
+  { 'nvim-treesitter/nvim-treesitter', build = ':TSUpdate' },
+
+  -- 4. Tema (opcional, mas recomendado)
+  { 'folke/tokyonight.nvim', lazy = false, priority = 1000 },
+
+  -- Telescope: O buscador universal
+  {
+    'nvim-telescope/telescope.nvim',
+    -- Remova a linha 'tag' e 'branch' por enquanto para pegar a versão 'master' (mais atualizada)
+    dependencies = { 'nvim-lua/plenary.nvim' },
+    config = function()
+      require('telescope').setup({})
+      local builtin = require('telescope.builtin')
+      vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
+      vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
+      vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
+    end
+  },
+
+})
+
+
+local cmp = require 'cmp'
+cmp.setup({
+  snippet = {
+    expand = function(args)
+      require('luasnip').lsp_expand(args.body)
+    end,
+  },
+  mapping = cmp.mapping.preset.insert({
+    ['<C-b>'] = cmp.mapping.scroll_docs(-4),
+    ['<C-f>'] = cmp.mapping.scroll_docs(4),
+    ['<C-Space>'] = cmp.mapping.complete(), -- Força abrir o menu
+    ['<CR>'] = cmp.mapping.confirm({ select = true }), -- 'Enter' confirma
+    ['<Tab>'] = cmp.mapping.select_next_item(),        -- 'Tab' desse no menu
+    ['<S-Tab>'] = cmp.mapping.select_prev_item(),    -- 'Shift+Tab' sobe
+  }),
+  sources = cmp.config.sources({
+    { name = 'nvim_lsp' },
+    { name = 'luasnip' },
+  })
+})
+
+
+-- Ativar o tema
+vim.cmd[[colorscheme tokyonight]]
+
+-- Atalhos para LSP (Só funcionam quando o Pyright estiver ativo no arquivo)
+vim.api.nvim_create_autocmd('LspAttach', {
+  callback = function(ev)
+    local opts = { buffer = ev.buf }
+    -- gd -> Go to Definition (Ir para onde a função/variável foi criada)
+    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
+    -- K -> Hover (Mostra a documentação da função num popup)
+    vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
+    -- <leader>rn -> Rename (Renomeia a variável em todo o projeto)
+    vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, opts)
+    -- <leader>ca -> Code Action (Sugestões de correção rápida)
+    vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, opts)
+  end,
+})
+
+-- Desativar o netrw (navegador de arquivos padrão do vim)
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+
+-- Configuração básica
+require("nvim-tree").setup({
+  view = {
+    width = 30,
+    side = "left",
+  },
+  filters = {
+    dotfiles = false, -- mostra arquivos ocultos (como .env ou .gitignore)
+  },
+})
+
+vim.keymap.set('n', '<leader>e', ':NvimTreeToggle<CR>', { silent = true })
+
+
+-- Dentro do seu setup de lspconfig
+local lspconfig = require('lspconfig')
+
+-- Configuração do Ruff
+lspconfig.ruff.setup({
+  on_attach = function(client, bufnr)
+    -- Opcional: Desativa as capacidades de formatação do Pyright 
+    -- se você quiser que APENAS o Ruff formate seu código.
+    client.server_capabilities.hoverProvider = false
+  end,
+})
