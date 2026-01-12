@@ -1,125 +1,271 @@
--- Define a tecla de atalho principal (Leader) como o Espaço
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║                         CONFIGURAÇÃO DO NEOVIM                            ║
+-- ║                    Organizado para iniciantes em Lua                      ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
+
+-- ============================================================================
+-- SEÇÃO 1: CONFIGURAÇÕES INICIAIS (devem vir ANTES de tudo)
+-- ============================================================================
+
+-- Define a tecla "Leader" como Espaço.
+-- Leader é um prefixo para atalhos customizados. Ex: <leader>ff = Espaço + f + f
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
--- Instalação automática do gerenciador de plugins 'lazy.nvim'
-local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
+-- Desativa o "netrw" (navegador de arquivos padrão do Vim).
+-- IMPORTANTE: Deve vir ANTES de carregar o nvim-tree para evitar conflitos.
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+
+-- ============================================================================
+-- SEÇÃO 2: GERENCIADOR DE PLUGINS (lazy.nvim)
+-- ============================================================================
+
+-- Instala automaticamente o lazy.nvim se ele não existir.
+-- O lazy.nvim é o gerenciador que baixa e atualiza todos os seus plugins.
+local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
 if not vim.loop.fs_stat(lazypath) then
-  vim.fn.system {
-    'git', 'clone', '--filter=blob:none', 'https://github.com/folke/lazy.nvim.git', '--branch=stable', lazypath,
-  }
+  vim.fn.system({
+    'git', 'clone', '--filter=blob:none',
+    'https://github.com/folke/lazy.nvim.git',
+    '--branch=stable', lazypath,
+  })
 end
 vim.opt.rtp:prepend(lazypath)
 
--- Configuração dos plugins
+-- ============================================================================
+-- SEÇÃO 3: LISTA DE PLUGINS
+-- ============================================================================
+
 require('lazy').setup({
-  -- 1. LSP: O cérebro para o Python
-  { 'neovim/nvim-lspconfig' },
-  
-  -- Autocompletar
-  { 'hrsh7th/nvim-cmp' },         -- O motor do menu
-  { 'hrsh7th/cmp-nvim-lsp' },    -- Faz o menu ler o LSP
-  { 'L3MON4D3/LuaSnip' },        -- Suporte a snippets (atalhos de código)
-  { 'saadparwaiz1/cmp_luasnip' },-- Conecta o motor aos snippets
 
-  -- 2. Mason: O instalador de ferramentas (Linter, Formatter, LSP)
+  -- ─────────────────────────────────────────────────────────────────────────
+  -- TEMA DE CORES
+  -- Um tema bonito deixa a experiência muito mais agradável!
+  -- ─────────────────────────────────────────────────────────────────────────
+  {
+    'folke/tokyonight.nvim',
+    lazy = false,      -- Carrega imediatamente (não espera ser chamado)
+    priority = 1000,   -- Carrega primeiro que os outros plugins
+    config = function()
+      vim.cmd.colorscheme('tokyonight')
+    end,
+  },
+
+  -- ─────────────────────────────────────────────────────────────────────────
+  -- TREESITTER: Syntax Highlighting Avançado
+  -- Na versão nova, o Neovim já usa Treesitter nativamente.
+  -- Este plugin apenas gerencia os parsers (analisadores de linguagem).
+  -- ─────────────────────────────────────────────────────────────────────────
+  {
+    'nvim-treesitter/nvim-treesitter',
+    build = ':TSUpdate',
+  },
+
+  -- ─────────────────────────────────────────────────────────────────────────
+  -- MASON: Instalador de Ferramentas
+  -- Instala LSPs, formatadores e linters de forma fácil.
+  -- ─────────────────────────────────────────────────────────────────────────
   { 'williamboman/mason.nvim', config = true },
-  { 'williamboman/mason-lspconfig.nvim', config = true },
+  { 'williamboman/mason-lspconfig.nvim' },  -- Conecta Mason com o LSP
 
-  -- Barra lateral de arquivos
-  { 'nvim-tree/nvim-tree.lua' },
-  -- Ícones para os arquivos (opcional, mas recomendado)
-  { 'nvim-tree/nvim-web-devicons' },
+  -- ─────────────────────────────────────────────────────────────────────────
+  -- LSP: Language Server Protocol
+  -- O "cérebro" que entende seu código e oferece autocompletar, erros, etc.
+  -- ─────────────────────────────────────────────────────────────────────────
+  { 'neovim/nvim-lspconfig' },
 
-  -- 3. Cores e Sintaxe
-  { 'nvim-treesitter/nvim-treesitter', build = ':TSUpdate' },
+  -- ─────────────────────────────────────────────────────────────────────────
+  -- AUTOCOMPLETAR (nvim-cmp)
+  -- O motor que mostra o menu de sugestões enquanto você digita.
+  -- ─────────────────────────────────────────────────────────────────────────
+  { 'hrsh7th/nvim-cmp' },         -- Motor principal do menu
+  { 'hrsh7th/cmp-nvim-lsp' },     -- Fonte: sugestões do LSP
+  { 'L3MON4D3/LuaSnip' },         -- Motor de snippets (atalhos de código)
+  { 'saadparwaiz1/cmp_luasnip' }, -- Fonte: snippets do LuaSnip
 
-  -- 4. Tema (opcional, mas recomendado)
-  { 'folke/tokyonight.nvim', lazy = false, priority = 1000 },
+  -- ─────────────────────────────────────────────────────────────────────────
+  -- NVIM-TREE: Explorador de Arquivos
+  -- Uma barra lateral para navegar nas pastas do seu projeto.
+  -- ─────────────────────────────────────────────────────────────────────────
+  {
+    'nvim-tree/nvim-tree.lua',
+    dependencies = { 'nvim-tree/nvim-web-devicons' },  -- Ícones bonitos
+    config = function()
+      require('nvim-tree').setup({
+        view = {
+          width = 30,
+          side = 'left',
+        },
+        filters = {
+          dotfiles = false,  -- Mostra arquivos ocultos (.env, .gitignore, etc.)
+        },
+      })
+    end,
+  },
 
-  -- Telescope: O buscador universal
+  -- ─────────────────────────────────────────────────────────────────────────
+  -- TELESCOPE: Buscador Universal
+  -- Busca arquivos, textos, buffers e muito mais com fuzzy finding.
+  -- ─────────────────────────────────────────────────────────────────────────
   {
     'nvim-telescope/telescope.nvim',
-    -- Remova a linha 'tag' e 'branch' por enquanto para pegar a versão 'master' (mais atualizada)
-    dependencies = { 'nvim-lua/plenary.nvim' },
+    dependencies = { 'nvim-lua/plenary.nvim' },  -- Biblioteca necessária
     config = function()
       require('telescope').setup({})
-      local builtin = require('telescope.builtin')
-      vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
-      vim.keymap.set('n', '<leader>fg', builtin.live_grep, {})
-      vim.keymap.set('n', '<leader>fb', builtin.buffers, {})
-    end
+    end,
   },
 
 })
 
+-- ============================================================================
+-- SEÇÃO 4: CONFIGURAÇÃO DO AUTOCOMPLETAR (nvim-cmp)
+-- ============================================================================
 
-local cmp = require 'cmp'
+local cmp = require('cmp')
+
 cmp.setup({
+  -- Configuração de snippets (atalhos de código expandíveis)
   snippet = {
     expand = function(args)
       require('luasnip').lsp_expand(args.body)
     end,
   },
+
+  -- Mapeamentos de teclas do menu de autocompletar
   mapping = cmp.mapping.preset.insert({
-    ['<C-b>'] = cmp.mapping.scroll_docs(-4),
-    ['<C-f>'] = cmp.mapping.scroll_docs(4),
-    ['<C-Space>'] = cmp.mapping.complete(), -- Força abrir o menu
-    ['<CR>'] = cmp.mapping.confirm({ select = true }), -- 'Enter' confirma
-    ['<Tab>'] = cmp.mapping.select_next_item(),        -- 'Tab' desse no menu
-    ['<S-Tab>'] = cmp.mapping.select_prev_item(),    -- 'Shift+Tab' sobe
+    ['<C-b>']     = cmp.mapping.scroll_docs(-4),        -- Scroll para cima na documentação
+    ['<C-f>']     = cmp.mapping.scroll_docs(4),         -- Scroll para baixo na documentação
+    ['<C-Space>'] = cmp.mapping.complete(),             -- Força abrir o menu
+    ['<CR>']      = cmp.mapping.confirm({ select = true }), -- Enter confirma a seleção
+    ['<Tab>']     = cmp.mapping.select_next_item(),     -- Tab vai para o próximo item
+    ['<S-Tab>']   = cmp.mapping.select_prev_item(),     -- Shift+Tab volta para o anterior
   }),
+
+  -- De onde vêm as sugestões (ordem de prioridade)
   sources = cmp.config.sources({
-    { name = 'nvim_lsp' },
-    { name = 'luasnip' },
-  })
+    { name = 'nvim_lsp' },  -- Sugestões do Language Server
+    { name = 'luasnip' },   -- Snippets
+  }),
 })
 
+-- ============================================================================
+-- SEÇÃO 5: CONFIGURAÇÃO DO LSP (Language Server Protocol)
+-- ============================================================================
 
--- Ativar o tema
-vim.cmd[[colorscheme tokyonight]]
+-- Obtém as capacidades do cmp-nvim-lsp para que o LSP saiba
+-- que o editor suporta autocompletar avançado.
+local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
--- Atalhos para LSP (Só funcionam quando o Pyright estiver ativo no arquivo)
-vim.api.nvim_create_autocmd('LspAttach', {
-  callback = function(ev)
-    local opts = { buffer = ev.buf }
-    -- gd -> Go to Definition (Ir para onde a função/variável foi criada)
-    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
-    -- K -> Hover (Mostra a documentação da função num popup)
-    vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
-    -- <leader>rn -> Rename (Renomeia a variável em todo o projeto)
-    vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, opts)
-    -- <leader>ca -> Code Action (Sugestões de correção rápida)
-    vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, opts)
-  end,
+-- Configura o Mason-lspconfig para instalar e configurar os servidores LSP
+require('mason-lspconfig').setup({
+  -- Lista de servidores LSP que serão instalados automaticamente
+  ensure_installed = { 'pyright', 'ruff' },
 })
 
--- Desativar o netrw (navegador de arquivos padrão do vim)
-vim.g.loaded_netrw = 1
-vim.g.loaded_netrwPlugin = 1
-
--- Configuração básica
-require("nvim-tree").setup({
-  view = {
-    width = 30,
-    side = "left",
-  },
-  filters = {
-    dotfiles = false, -- mostra arquivos ocultos (como .env ou .gitignore)
-  },
+-- ─────────────────────────────────────────────────────────────────────────
+-- PYRIGHT: LSP principal para Python
+-- Oferece autocompletar, ir para definição, hover (documentação), etc.
+-- ─────────────────────────────────────────────────────────────────────────
+vim.lsp.config('pyright', {
+  capabilities = capabilities,
 })
+vim.lsp.enable('pyright')
 
-vim.keymap.set('n', '<leader>e', ':NvimTreeToggle<CR>', { silent = true })
-
-
--- Dentro do seu setup de lspconfig
-local lspconfig = require('lspconfig')
-
--- Configuração do Ruff
-lspconfig.ruff.setup({
+-- ─────────────────────────────────────────────────────────────────────────
+-- RUFF: Linter/Formatter para Python (muito rápido!)
+-- Mostra erros de estilo e pode formatar o código.
+-- Desabilitamos o hover dele porque o Pyright já faz isso melhor.
+-- ─────────────────────────────────────────────────────────────────────────
+vim.lsp.config('ruff', {
+  capabilities = capabilities,
   on_attach = function(client, bufnr)
-    -- Opcional: Desativa as capacidades de formatação do Pyright 
-    -- se você quiser que APENAS o Ruff formate seu código.
+    -- Desativa o hover do Ruff para não conflitar com o Pyright
     client.server_capabilities.hoverProvider = false
   end,
 })
+vim.lsp.enable('ruff')
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- Atalhos do LSP (só funcionam quando um servidor LSP está ativo no arquivo)
+-- ─────────────────────────────────────────────────────────────────────────
+vim.api.nvim_create_autocmd('LspAttach', {
+  desc = 'Configura atalhos do LSP quando um servidor se conecta',
+  callback = function(ev)
+    local opts = { buffer = ev.buf }
+
+    -- gd = Go to Definition (vai para onde a função/variável foi definida)
+    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
+
+    -- K = Hover (mostra documentação da função em um popup)
+    vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
+
+    -- <leader>rn = Rename (renomeia a variável em todo o projeto)
+    vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, opts)
+
+    -- <leader>ca = Code Action (mostra sugestões de correção rápida)
+    vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, opts)
+
+    -- gr = Go to References (mostra onde a função/variável é usada)
+    vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
+  end,
+})
+
+-- ============================================================================
+-- SEÇÃO 6: ATALHOS DE TECLADO (Keymaps)
+-- ============================================================================
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- NVIM-TREE (Explorador de Arquivos)
+-- ─────────────────────────────────────────────────────────────────────────
+
+-- <leader>e = Abre/fecha a árvore de arquivos
+vim.keymap.set('n', '<leader>e', ':NvimTreeToggle<CR>', { silent = true, desc = 'Toggle NvimTree' })
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- TELESCOPE (Buscador)
+-- ─────────────────────────────────────────────────────────────────────────
+
+local telescope_builtin = require('telescope.builtin')
+
+-- <leader>ff = [F]ind [F]iles (busca arquivos por nome)
+vim.keymap.set('n', '<leader>ff', telescope_builtin.find_files, { desc = 'Find Files' })
+
+-- <leader>fg = [F]ind by [G]rep (busca texto dentro de todos os arquivos)
+vim.keymap.set('n', '<leader>fg', telescope_builtin.live_grep, { desc = 'Live Grep' })
+
+-- <leader>fb = [F]ind [B]uffers (busca em arquivos já abertos)
+vim.keymap.set('n', '<leader>fb', telescope_builtin.buffers, { desc = 'Find Buffers' })
+
+-- <leader>fh = [F]ind [H]elp (busca na documentação do Neovim)
+vim.keymap.set('n', '<leader>fh', telescope_builtin.help_tags, { desc = 'Help Tags' })
+
+-- ============================================================================
+-- SEÇÃO 7: CONFIGURAÇÕES DO EDITOR (Opcionais, mas recomendadas)
+-- ============================================================================
+
+local opt = vim.opt
+
+opt.number = true          -- Mostra números de linha
+opt.relativenumber = true  -- Números relativos (útil para pular linhas com 5j, 10k)
+opt.mouse = 'a'            -- Habilita o mouse em todos os modos
+opt.ignorecase = true      -- Busca ignora maiúsculas/minúsculas
+opt.smartcase = true       -- ...exceto se você digitar maiúsculas
+opt.hlsearch = true        -- Destaca resultados da busca
+opt.wrap = false           -- Não quebra linhas longas
+opt.tabstop = 4            -- Tab = 4 espaços
+opt.shiftwidth = 4         -- Indentação = 4 espaços
+opt.expandtab = true       -- Converte Tab em espaços
+opt.cursorline = true      -- Destaca a linha atual
+opt.termguicolors = true   -- Cores RGB no terminal (necessário para temas modernos)
+opt.signcolumn = 'yes'     -- Sempre mostra a coluna de sinais (evita o texto "pular")
+opt.clipboard = 'unnamedplus' -- Usa a área de transferência do sistema (Ctrl+C/V)
+
+-- ============================================================================
+-- FIM DA CONFIGURAÇÃO! 🎉
+-- ============================================================================
+-- Comandos úteis para lembrar:
+--   :Lazy          → Abre o gerenciador de plugins
+--   :Mason         → Abre o instalador de ferramentas LSP
+--   :checkhealth   → Verifica se tudo está funcionando corretamente
+-- ============================================================================
